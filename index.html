@@ -33,52 +33,54 @@
       z-index: 9;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 225px); /* keypad area estimation */
+      height: auto;
+      /* Remove any fixed height, let scrollable fill available space */
     }
     .order-status-zone-scrollable {
       overflow-y: auto;
-      flex: 1 1 0;
-      min-height: 120px;
-      height: 100%;
-      /* No max-height, so it will expand fully to fill the space between header and keypad */
-      scroll-behavior: smooth;
+      min-height: 80px;
+      /* Make this as small as possible but still visible */
+      /* Let it stretch to keypad */
+      /* Height will be set by flex below */
+      flex: 1 1 auto;
+      max-height: none;
+      height: auto;
+      /* Remove max-height so it can touch the keypad */
     }
     .order-status-zone {
       width: 100%;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      padding: 18px 10px 10px 10px;
+      padding: 8px 10px 6px 10px; /* ลด padding เพื่อให้แถบเตี้ยลง */
       box-sizing: border-box;
-      height: 100%;
     }
     .order-status-block {
       background: #f6f6f6;
       border-radius: 13px;
-      padding: 13px 11px 8px 13px;
+      padding: 8px 8px 6px 10px; /* ลด padding เพื่อให้บล็อกเตี้ยลง */
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      min-height: 54px;
+      min-height: 34px; /* ลด min-height */
       min-width: 0;
       display: flex;
       flex-direction: column;
     }
     .order-status-title {
       font-weight: bold;
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       color: #800014;
       letter-spacing: 0.03em;
-      margin-bottom: 7px;
+      margin-bottom: 4px;
     }
     .order-list {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      /* Remove white bar below order-list in readyBlock */
       min-height: 0;
       flex: 1 1 auto;
       align-content: flex-start;
     }
-    /* Make readyBlock take all space left and push to keypad */
+    /* Make the readyBlock take all space left and push to keypad */
     #readyBlock {
       flex: 1 1 0;
       display: flex;
@@ -87,7 +89,6 @@
     #readyList {
       flex: 1 1 auto;
       min-height: 0;
-      /* Remove extra white area */
     }
     .order-item {
       background: #fff;
@@ -269,7 +270,7 @@
         padding-right: 3px;
       }
       .order-status-block {
-        padding: 10px 5px 6px 8px;
+        padding: 6px 3px 3px 4px;
       }
       .order-input {
         font-size: 1.6rem;
@@ -286,7 +287,7 @@
       .order-item {font-size: 1.102em; padding: 3px 8px;}
       .order-status-zone {padding-top: 7px;}
       .order-icon, .grab-logo, .lineman-logo { width: 1.08em; height: 1.08em;}
-      .order-status-zone-scrollable {max-height: 32vh;}
+      .order-status-zone-scrollable {min-height: 60px;}
     }
   </style>
 </head>
@@ -455,7 +456,6 @@
       addOrderToCooking(val);
       input.value = '';
       updateEnterBtnState();
-      scrollToBottom();
     }
 
     function addOrderToCooking(orderNo) {
@@ -463,7 +463,6 @@
       cookingOrders.push(orderNo);
       renderOrders();
       syncOrdersToFirestore();
-      scrollToBottom();
     }
 
     function moveToReady(orderNo) {
@@ -473,7 +472,6 @@
         readyOrders.push(orderNo);
         renderOrders();
         syncOrdersToFirestore();
-        scrollToBottom();
       }
     }
 
@@ -527,24 +525,13 @@
       });
     }
 
-    // Scroll to bottom on new order/ready
-    function scrollToBottom() {
-      setTimeout(() => {
-        var scrollable = document.getElementById('orderStatusScrollable');
-        scrollable.scrollTop = scrollable.scrollHeight;
-      }, 100);
-    }
-
     // ==== Firestore Sync ====
     function syncOrdersToFirestore() {
-      // Collection name เปลี่ยนได้ตามต้องการ
       const collectionRef = db.collection('orders_1');
-      // 1. ลบข้อมูลเก่าทั้งหมด
       collectionRef.get().then(snapshot => {
         const batch = db.batch();
         snapshot.forEach(doc => batch.delete(doc.ref));
         batch.commit().then(() => {
-          // 2. เพิ่มข้อมูลใหม่
           cookingOrders.forEach(order => {
             collectionRef.add({
               orderNumber: order,

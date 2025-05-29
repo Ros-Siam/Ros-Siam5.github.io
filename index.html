@@ -22,6 +22,7 @@
       align-items: center;
       touch-action: manipulation;
     }
+    /* --- เพิ่มส่วน scrollable ครอบ order-status-zone --- */
     .order-status-zone-outer {
       width: 100vw;
       max-width: 420px;
@@ -33,58 +34,42 @@
       z-index: 9;
       display: flex;
       flex-direction: column;
-      height: auto;
+      /* ปรับความสูงให้เหลือพื้นที่ keypad ด้านล่าง */
+      height: calc(100vh - 250px); /* ปรับค่าตามความสูง keypad/input */
     }
     .order-status-zone-scrollable {
+      flex: 1 1 auto;
       overflow-y: auto;
-      min-height: 80px;
-      max-height: calc(100vh - 260px); /* keypad + input area height estimate */
-      height: auto;
+      max-height: 100%;
+      min-height: 120px;
     }
     .order-status-zone {
       width: 100%;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      padding: 8px 10px 6px 10px;
+      padding: 18px 10px 10px 10px;
       box-sizing: border-box;
     }
     .order-status-block {
       background: #f6f6f6;
       border-radius: 13px;
-      padding: 8px 8px 6px 10px;
+      padding: 13px 11px 8px 13px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      min-height: 34px;
+      min-height: 54px;
       min-width: 0;
-      display: flex;
-      flex-direction: column;
     }
     .order-status-title {
       font-weight: bold;
-      font-size: 1.05rem;
+      font-size: 1.15rem;
       color: #800014;
       letter-spacing: 0.03em;
-      margin-bottom: 4px;
+      margin-bottom: 7px;
     }
     .order-list {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      min-height: 0;
-      align-content: flex-start;
-    }
-    #readyBlock {
-      flex: 1 1 auto;
-      display: flex;
-      flex-direction: column;
-    }
-    #readyList {
-      flex: 1 1 auto;
-      min-height: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-content: flex-start;
     }
     .order-item {
       background: #fff;
@@ -135,7 +120,6 @@
     .order-item .move-btn:active {
       background: #b0001a;
     }
-
     .order-keypad-container {
       width: 100vw;
       max-width: 420px;
@@ -266,7 +250,7 @@
         padding-right: 3px;
       }
       .order-status-block {
-        padding: 6px 3px 3px 4px;
+        padding: 10px 5px 6px 8px;
       }
       .order-input {
         font-size: 1.6rem;
@@ -346,8 +330,8 @@
     const db = firebase.firestore();
 
     // ==== Order Logic ====
-    let cookingOrders = [];
-    let readyOrders = [];
+    const cookingOrders = [];
+    const readyOrders = [];
 
     // DOM
     const input = document.getElementById('orderInput');
@@ -457,7 +441,6 @@
     function addOrderToCooking(orderNo) {
       if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
       cookingOrders.push(orderNo);
-      saveOrdersToLocal();
       renderOrders();
       syncOrdersToFirestore();
     }
@@ -467,7 +450,6 @@
       if (idx > -1) {
         cookingOrders.splice(idx, 1);
         readyOrders.push(orderNo);
-        saveOrdersToLocal();
         renderOrders();
         syncOrdersToFirestore();
       }
@@ -477,7 +459,6 @@
       const idx = readyOrders.indexOf(orderNo);
       if (idx > -1) {
         readyOrders.splice(idx, 1);
-        saveOrdersToLocal();
         renderOrders();
         syncOrdersToFirestore();
       }
@@ -526,11 +507,14 @@
 
     // ==== Firestore Sync ====
     function syncOrdersToFirestore() {
+      // Collection name เปลี่ยนได้ตามต้องการ
       const collectionRef = db.collection('orders_1');
+      // 1. ลบข้อมูลเก่าทั้งหมด
       collectionRef.get().then(snapshot => {
         const batch = db.batch();
         snapshot.forEach(doc => batch.delete(doc.ref));
         batch.commit().then(() => {
+          // 2. เพิ่มข้อมูลใหม่
           cookingOrders.forEach(order => {
             collectionRef.add({
               orderNumber: order,
@@ -549,27 +533,8 @@
       });
     }
 
-    // ==== Local Storage for persistence on refresh ====
-    function saveOrdersToLocal() {
-      localStorage.setItem('cookingOrders', JSON.stringify(cookingOrders));
-      localStorage.setItem('readyOrders', JSON.stringify(readyOrders));
-    }
-    function loadOrdersFromLocal() {
-      try {
-        const cook = localStorage.getItem('cookingOrders');
-        const ready = localStorage.getItem('readyOrders');
-        cookingOrders = cook ? JSON.parse(cook) : [];
-        readyOrders = ready ? JSON.parse(ready) : [];
-      } catch (e) {
-        cookingOrders = [];
-        readyOrders = [];
-      }
-    }
-
-    // ==== Init ====
-    loadOrdersFromLocal();
+    // Init
     renderOrders();
-
     // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
     // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
   </script>

@@ -38,7 +38,6 @@
     .order-status-zone-scrollable {
       overflow-y: auto;
       min-height: 80px;
-      /* Let the block stretch by content */
       max-height: calc(100vh - 260px); /* keypad + input area height estimate */
       height: auto;
     }
@@ -59,7 +58,6 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      /* Remove flex: 1 for normal, but add for readyBlock below */
     }
     .order-status-title {
       font-weight: bold;
@@ -74,14 +72,11 @@
       gap: 8px;
       min-height: 0;
       align-content: flex-start;
-      /* Remove flex: 1 */
     }
-    /* Make readyBlock stretch as much as possible as its children grow */
     #readyBlock {
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
-      /* let it grow by content */
     }
     #readyList {
       flex: 1 1 auto;
@@ -351,8 +346,8 @@
     const db = firebase.firestore();
 
     // ==== Order Logic ====
-    const cookingOrders = [];
-    const readyOrders = [];
+    let cookingOrders = [];
+    let readyOrders = [];
 
     // DOM
     const input = document.getElementById('orderInput');
@@ -462,6 +457,7 @@
     function addOrderToCooking(orderNo) {
       if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
       cookingOrders.push(orderNo);
+      saveOrdersToLocal();
       renderOrders();
       syncOrdersToFirestore();
     }
@@ -471,6 +467,7 @@
       if (idx > -1) {
         cookingOrders.splice(idx, 1);
         readyOrders.push(orderNo);
+        saveOrdersToLocal();
         renderOrders();
         syncOrdersToFirestore();
       }
@@ -480,6 +477,7 @@
       const idx = readyOrders.indexOf(orderNo);
       if (idx > -1) {
         readyOrders.splice(idx, 1);
+        saveOrdersToLocal();
         renderOrders();
         syncOrdersToFirestore();
       }
@@ -551,8 +549,27 @@
       });
     }
 
-    // Init
+    // ==== Local Storage for persistence on refresh ====
+    function saveOrdersToLocal() {
+      localStorage.setItem('cookingOrders', JSON.stringify(cookingOrders));
+      localStorage.setItem('readyOrders', JSON.stringify(readyOrders));
+    }
+    function loadOrdersFromLocal() {
+      try {
+        const cook = localStorage.getItem('cookingOrders');
+        const ready = localStorage.getItem('readyOrders');
+        cookingOrders = cook ? JSON.parse(cook) : [];
+        readyOrders = ready ? JSON.parse(ready) : [];
+      } catch (e) {
+        cookingOrders = [];
+        readyOrders = [];
+      }
+    }
+
+    // ==== Init ====
+    loadOrdersFromLocal();
     renderOrders();
+
     // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
     // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
   </script>

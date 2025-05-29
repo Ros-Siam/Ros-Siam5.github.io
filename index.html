@@ -278,8 +278,25 @@
       <button class="keypad-btn enter" id="btnEnter" data-key="enter" style="grid-column: 3;">Enter</button>
     </div>
   </div>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script>
-    // Order arrays
+    // ==== Firebase config ====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFisUUeCGCvL3_3XK3t_OStyO3f24A238",
+      authDomain: "ros-siam-queue-management.firebaseapp.com",
+      projectId: "ros-siam-queue-management",
+      storageBucket: "ros-siam-queue-management.appspot.com",
+      messagingSenderId: "790945202211",
+      appId: "1:790945202211:web:d9df471dbd9fca8d843196",
+      measurementId: "G-V3KN3LCMY7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ==== Order Logic ====
     const cookingOrders = [];
     const readyOrders = [];
 
@@ -327,7 +344,7 @@
     }
     updateEnterBtnState();
 
-    // Voice recognition (Web Speech API, faster: input as interim & auto-enter)
+    // Voice recognition (Web Speech API)
     let recognizing = false;
     let recognition;
     if ('webkitSpeechRecognition' in window) {
@@ -351,16 +368,14 @@
             interim += transcript;
           }
         }
-        // ดึงเฉพาะตัวเลข (interim จะขึ้นระหว่างพูดเลย)
         let digits = (finalTranscript + interim).replace(/\D/g, '').slice(0, 4);
         input.value = digits;
         updateEnterBtnState();
-        // ถ้าได้ครบ 3 หรือ 4 หลัก ให้ Enter อัตโนมัติ (ครั้งเดียว)
         if ((digits.length === 3 || digits.length === 4) && recognizing) {
           recognition.stop();
           setTimeout(() => {
             trySubmitOrder();
-          }, 100); // delay เล็กน้อยเพื่อให้ค่า input อัพเดท
+          }, 100);
         }
       };
 
@@ -387,39 +402,37 @@
       updateEnterBtnState();
     }
 
-    // Add order to cooking
     function addOrderToCooking(orderNo) {
       if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
       cookingOrders.push(orderNo);
       renderOrders();
+      syncOrdersToFirestore();
     }
 
-    // Move to ready
     function moveToReady(orderNo) {
       const idx = cookingOrders.indexOf(orderNo);
       if (idx > -1) {
         cookingOrders.splice(idx, 1);
         readyOrders.push(orderNo);
         renderOrders();
+        syncOrdersToFirestore();
       }
     }
 
-    // Remove from ready (delivered/clear)
     function removeFromReady(orderNo) {
       const idx = readyOrders.indexOf(orderNo);
       if (idx > -1) {
         readyOrders.splice(idx, 1);
         renderOrders();
+        syncOrdersToFirestore();
       }
     }
 
-    // Render orders
     function renderOrders() {
       cookingList.innerHTML = '';
       cookingOrders.forEach(order => {
         const el = document.createElement('div');
         el.className = 'order-item';
-        // ใส่โลโก้ Grab/Lineman ตามเลข 3 หรือ 4 หลัก
         if (order.length === 3) {
           el.innerHTML = `<span class="order-icon"><img class="grab-logo" src="${grabLogoUrl}" alt="Grab"></span>${order}`;
         } else if (order.length === 4) {
@@ -427,7 +440,6 @@
         } else {
           el.innerHTML = order;
         }
-        // ปุ่ม "พร้อมส่ง"
         const btn = document.createElement('button');
         btn.className = 'move-btn';
         btn.title = 'ย้ายไปพร้อมส่ง';
@@ -447,7 +459,6 @@
         } else {
           el.innerHTML = order;
         }
-        // ปุ่มลบ (delivered)
         const btn = document.createElement('button');
         btn.className = 'move-btn';
         btn.title = 'ส่งแล้ว/ลบออก';
@@ -458,8 +469,38 @@
       });
     }
 
+    // ==== Firestore Sync ====
+    function syncOrdersToFirestore() {
+      // Collection name เปลี่ยนได้ตามต้องการ
+      const collectionRef = db.collection('orders_1');
+      // 1. ลบข้อมูลเก่าทั้งหมด
+      collectionRef.get().then(snapshot => {
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        batch.commit().then(() => {
+          // 2. เพิ่มข้อมูลใหม่
+          cookingOrders.forEach(order => {
+            collectionRef.add({
+              orderNumber: order,
+              status: "preparing",
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          readyOrders.forEach(order => {
+            collectionRef.add({
+              orderNumber: order,
+              status: "ready",
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+        });
+      });
+    }
+
     // Init
     renderOrders();
+    // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
+    // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
   </script>
 </body>
 </html>

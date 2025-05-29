@@ -34,15 +34,14 @@
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      /* height: calc(100vh - 260px);  will be set inline for JS */
     }
     .order-status-zone-scrollable {
       overflow-y: auto;
       flex: 1 1 0;
       min-height: 60px;
       max-height: calc(100vh - 310px); /* keypad + padding */
-      /* Smooth scrolling for button scroll */
       scroll-behavior: smooth;
+      /* For smooth scroll on button click */
     }
     .order-status-zone {
       width: 100%;
@@ -92,10 +91,10 @@
       margin-right: 6px;
       display: flex;
       align-items: center;
-      height: 1.404em; /* 1.3em x 1.08 */
+      height: 1.404em;
     }
     .grab-logo, .lineman-logo {
-      width: 1.404em; /* 1.3em x 1.08 */
+      width: 1.404em;
       height: 1.404em;
       display: inline-block;
       object-fit: contain;
@@ -157,7 +156,6 @@
       color: #fff;
       opacity: 1;
     }
-    /* Hide scroll btns on small screens if not enough space */
     @media (max-width: 480px) {
       .order-status-zone-wrapper, .order-keypad-container {
         max-width: 100vw;
@@ -210,6 +208,7 @@
     <div class="order-input-row">
       <input type="text" class="order-input" id="orderInput" inputmode="none" readonly placeholder="กรอกออเดอร์ที่นี่"/>
       <button class="icon-btn backspace" id="btnBackspace" tabindex="-1" aria-label="Backspace">
+        <!-- White back arrow SVG -->
         <svg viewBox="0 0 32 32"><path d="M12.8 8L4 16l8.8 8H28v-2.67H16V10.67h12V8z"></path></svg>
       </button>
     </div>
@@ -268,7 +267,7 @@
     const grabLogoUrl = "https://drive.google.com/thumbnail?id=1vhOumfzWD7xseUY1YMqfHab7fdbln_Mg";
     const linemanLogoUrl = "https://drive.google.com/thumbnail?id=1WmMY7RkgnNNJBMLiid2OMevP0d4a-Dgq";
 
-    // Prevent scroll on mobile/touch
+    // Prevent scroll except on orderStatusScrollable (for touch devices)
     document.body.addEventListener('touchmove', function(e){
       if (!orderStatusScrollable.contains(e.target)) {
         e.preventDefault();
@@ -357,6 +356,7 @@
       addOrderToCooking(val);
       input.value = '';
       updateEnterBtnState();
+      scrollToBottom();
     }
 
     function addOrderToCooking(orderNo) {
@@ -364,10 +364,7 @@
       cookingOrders.push(orderNo);
       renderOrders();
       syncOrdersToFirestore();
-      // Scroll to bottom to show the latest order
-      setTimeout(() => {
-        orderStatusScrollable.scrollTop = orderStatusScrollable.scrollHeight;
-      }, 100);
+      scrollToBottom();
     }
 
     function moveToReady(orderNo) {
@@ -377,9 +374,7 @@
         readyOrders.push(orderNo);
         renderOrders();
         syncOrdersToFirestore();
-        setTimeout(() => {
-          orderStatusScrollable.scrollTop = orderStatusScrollable.scrollHeight;
-        }, 100);
+        scrollToBottom();
       }
     }
 
@@ -439,17 +434,20 @@
       btnScrollDown.disabled =
         orderStatusScrollable.scrollTop + orderStatusScrollable.clientHeight >= orderStatusScrollable.scrollHeight - 5;
     }
-
+    function scrollToBottom() {
+      setTimeout(() => {
+        orderStatusScrollable.scrollTop = orderStatusScrollable.scrollHeight;
+        updateScrollBtnState();
+      }, 100);
+    }
     btnScrollUp.addEventListener('click', () => {
       orderStatusScrollable.scrollBy({ top: -120, behavior: 'smooth' });
       setTimeout(updateScrollBtnState, 300);
     });
-
     btnScrollDown.addEventListener('click', () => {
       orderStatusScrollable.scrollBy({ top: 120, behavior: 'smooth' });
       setTimeout(updateScrollBtnState, 300);
     });
-
     orderStatusScrollable.addEventListener('scroll', updateScrollBtnState);
 
     // Initial state
@@ -487,16 +485,8 @@
     renderOrders();
     // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
     // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
-    // Ensure scroll btn state on load
     setTimeout(updateScrollBtnState, 400);
-
-    // (Optional) Resize support - update max-height for scrollable if needed
-    function adjustScrollableHeight() {
-      // let h = window.innerHeight - 260; // Estimate keypad + padding
-      // document.querySelector('.order-status-zone-wrapper').style.height = h + 'px';
-      updateScrollBtnState();
-    }
-    window.addEventListener('resize', adjustScrollableHeight);
+    window.addEventListener('resize', updateScrollBtnState);
   </script>
 </body>
 </html>

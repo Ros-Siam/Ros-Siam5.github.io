@@ -34,36 +34,32 @@
       display: flex;
       flex-direction: column;
       height: auto;
-      /* Remove any fixed height, let scrollable fill available space */
     }
     .order-status-zone-scrollable {
       overflow-y: auto;
       min-height: 80px;
-      /* Make this as small as possible but still visible */
-      /* Let it stretch to keypad */
-      /* Height will be set by flex below */
-      flex: 1 1 auto;
-      max-height: none;
+      /* Let the block stretch by content */
+      max-height: calc(100vh - 260px); /* keypad + input area height estimate */
       height: auto;
-      /* Remove max-height so it can touch the keypad */
     }
     .order-status-zone {
       width: 100%;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      padding: 8px 10px 6px 10px; /* ลด padding เพื่อให้แถบเตี้ยลง */
+      padding: 8px 10px 6px 10px;
       box-sizing: border-box;
     }
     .order-status-block {
       background: #f6f6f6;
       border-radius: 13px;
-      padding: 8px 8px 6px 10px; /* ลด padding เพื่อให้บล็อกเตี้ยลง */
+      padding: 8px 8px 6px 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      min-height: 34px; /* ลด min-height */
+      min-height: 34px;
       min-width: 0;
       display: flex;
       flex-direction: column;
+      /* Remove flex: 1 for normal, but add for readyBlock below */
     }
     .order-status-title {
       font-weight: bold;
@@ -77,18 +73,23 @@
       flex-wrap: wrap;
       gap: 8px;
       min-height: 0;
-      flex: 1 1 auto;
       align-content: flex-start;
+      /* Remove flex: 1 */
     }
-    /* Make the readyBlock take all space left and push to keypad */
+    /* Make readyBlock stretch as much as possible as its children grow */
     #readyBlock {
-      flex: 1 1 0;
+      flex: 1 1 auto;
       display: flex;
       flex-direction: column;
+      /* let it grow by content */
     }
     #readyList {
       flex: 1 1 auto;
       min-height: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: flex-start;
     }
     .order-item {
       background: #fff;

@@ -15,6 +15,8 @@
     body {
       width: 100vw;
       height: 100vh;
+      margin: 0;
+      padding: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -26,13 +28,11 @@
       width: 100vw;
       max-width: 420px;
       margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: flex-start;
       overflow-y: auto;
       box-sizing: border-box;
       z-index: 1;
+      /* เผื่อ padding ด้านล่างสำหรับ keypad */
+      padding-bottom: 245px;
     }
     .order-status-zone {
       width: 100%;
@@ -243,6 +243,9 @@
       .order-status-block {
         padding: 10px 5px 6px 8px;
       }
+      .main-content {
+        padding-bottom: 195px; /* keypad เตี้ยลงบนมือถือ */
+      }
       .order-input {
         font-size: 1.6rem;
         padding: 4px 6px;
@@ -278,7 +281,6 @@
     <div class="order-input-row">
       <input type="text" class="order-input" id="orderInput" inputmode="none" readonly placeholder="กรอกออเดอร์ที่นี่"/>
       <button class="icon-btn backspace" id="btnBackspace" tabindex="-1" aria-label="Backspace">
-        <!-- White back arrow SVG -->
         <svg viewBox="0 0 32 32"><path d="M12.8 8L4 16l8.8 8H28v-2.67H16V10.67h12V8z"></path></svg>
       </button>
     </div>

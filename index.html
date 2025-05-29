@@ -31,16 +31,17 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 9;
-      /* height: auto; */
       display: flex;
       flex-direction: column;
+      height: calc(100vh - 225px); /* keypad area estimation */
     }
     .order-status-zone-scrollable {
       overflow-y: auto;
-      max-height: 36vh;
+      flex: 1 1 0;
       min-height: 120px;
-      /* The height can be adjusted for your screen, 36vh works well for most */
-      /* Ensures the scroll only appears in this area */
+      height: 100%;
+      /* No max-height, so it will expand fully to fill the space between header and keypad */
+      scroll-behavior: smooth;
     }
     .order-status-zone {
       width: 100%;
@@ -49,6 +50,7 @@
       gap: 14px;
       padding: 18px 10px 10px 10px;
       box-sizing: border-box;
+      height: 100%;
     }
     .order-status-block {
       background: #f6f6f6;
@@ -57,6 +59,8 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       min-height: 54px;
       min-width: 0;
+      display: flex;
+      flex-direction: column;
     }
     .order-status-title {
       font-weight: bold;
@@ -69,6 +73,21 @@
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      /* Remove white bar below order-list in readyBlock */
+      min-height: 0;
+      flex: 1 1 auto;
+      align-content: flex-start;
+    }
+    /* Make readyBlock take all space left and push to keypad */
+    #readyBlock {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+    }
+    #readyList {
+      flex: 1 1 auto;
+      min-height: 0;
+      /* Remove extra white area */
     }
     .order-item {
       background: #fff;
@@ -346,9 +365,8 @@
     const grabLogoUrl = "https://drive.google.com/thumbnail?id=1vhOumfzWD7xseUY1YMqfHab7fdbln_Mg";
     const linemanLogoUrl = "https://drive.google.com/thumbnail?id=1WmMY7RkgnNNJBMLiid2OMevP0d4a-Dgq";
 
-    // Prevent scroll
+    // Prevent scroll except inside the scrollable order zone
     document.body.addEventListener('touchmove', function(e){
-      // allow scroll only inside orderStatusScrollable
       const scrollable = document.getElementById('orderStatusScrollable');
       if (!scrollable.contains(e.target)) {
         e.preventDefault();

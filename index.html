@@ -15,24 +15,33 @@
     body {
       width: 100vw;
       height: 100vh;
-      margin: 0;
-      padding: 0;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
+      justify-content: flex-end;
       align-items: center;
-      /* ไม่ต้อง overflow: hidden; */
       touch-action: manipulation;
     }
-    .main-content {
-      flex: 1 1 auto;
+    /* --- เพิ่มส่วน scrollable ครอบ order-status-zone --- */
+    .order-status-zone-outer {
       width: 100vw;
       max-width: 420px;
       margin: 0 auto;
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      /* ปรับความสูงให้เหลือพื้นที่ keypad ด้านล่าง */
+      height: calc(100vh - 250px); /* ปรับค่าตามความสูง keypad/input */
+    }
+    .order-status-zone-scrollable {
+      flex: 1 1 auto;
       overflow-y: auto;
-      box-sizing: border-box;
-      z-index: 1;
-      /* เผื่อ padding ด้านล่างสำหรับ keypad */
-      padding-bottom: 245px;
+      max-height: 100%;
+      min-height: 120px;
     }
     .order-status-zone {
       width: 100%;
@@ -235,16 +244,13 @@
       cursor: not-allowed;
     }
     @media (max-width: 480px) {
-      .main-content, .order-keypad-container {
+      .order-status-zone-outer, .order-keypad-container {
         max-width: 100vw;
         padding-left: 3px;
         padding-right: 3px;
       }
       .order-status-block {
         padding: 10px 5px 6px 8px;
-      }
-      .main-content {
-        padding-bottom: 195px; /* keypad เตี้ยลงบนมือถือ */
       }
       .order-input {
         font-size: 1.6rem;
@@ -261,19 +267,22 @@
       .order-item {font-size: 1.102em; padding: 3px 8px;}
       .order-status-zone {padding-top: 7px;}
       .order-icon, .grab-logo, .lineman-logo { width: 1.08em; height: 1.08em;}
+      .order-status-zone-scrollable {min-height: 60px;}
     }
   </style>
 </head>
 <body>
-  <div class="main-content">
-    <div class="order-status-zone">
-      <div class="order-status-block" id="cookingBlock">
-        <div class="order-status-title">กำลังเตรียมอาหาร</div>
-        <div class="order-list" id="cookingList"></div>
-      </div>
-      <div class="order-status-block" id="readyBlock">
-        <div class="order-status-title">พร้อมส่ง</div>
-        <div class="order-list" id="readyList"></div>
+  <div class="order-status-zone-outer">
+    <div class="order-status-zone-scrollable" id="orderStatusScrollable">
+      <div class="order-status-zone">
+        <div class="order-status-block" id="cookingBlock">
+          <div class="order-status-title">กำลังเตรียมอาหาร</div>
+          <div class="order-list" id="cookingList"></div>
+        </div>
+        <div class="order-status-block" id="readyBlock">
+          <div class="order-status-title">พร้อมส่ง</div>
+          <div class="order-list" id="readyList"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -281,6 +290,7 @@
     <div class="order-input-row">
       <input type="text" class="order-input" id="orderInput" inputmode="none" readonly placeholder="กรอกออเดอร์ที่นี่"/>
       <button class="icon-btn backspace" id="btnBackspace" tabindex="-1" aria-label="Backspace">
+        <!-- White back arrow SVG -->
         <svg viewBox="0 0 32 32"><path d="M12.8 8L4 16l8.8 8H28v-2.67H16V10.67h12V8z"></path></svg>
       </button>
     </div>
@@ -301,6 +311,232 @@
       </button>
     </div>
   </div>
-  <!-- ... script เหมือนเดิม ... -->
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    // ==== Firebase config ====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFisUUeCGCvL3_3XK3t_OStyO3f24A238",
+      authDomain: "ros-siam-queue-management.firebaseapp.com",
+      projectId: "ros-siam-queue-management",
+      storageBucket: "ros-siam-queue-management.appspot.com",
+      messagingSenderId: "790945202211",
+      appId: "1:790945202211:web:d9df471dbd9fca8d843196",
+      measurementId: "G-V3KN3LCMY7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ==== Order Logic ====
+    const cookingOrders = [];
+    const readyOrders = [];
+
+    // DOM
+    const input = document.getElementById('orderInput');
+    const btnBackspace = document.getElementById('btnBackspace');
+    const btnVoice = document.getElementById('btnVoice');
+    const keypadButtons = document.querySelectorAll('.keypad-btn');
+    const btnEnter = document.getElementById('btnEnter');
+    const cookingList = document.getElementById('cookingList');
+    const readyList = document.getElementById('readyList');
+
+    // Logo URLs
+    const grabLogoUrl = "https://drive.google.com/thumbnail?id=1vhOumfzWD7xseUY1YMqfHab7fdbln_Mg";
+    const linemanLogoUrl = "https://drive.google.com/thumbnail?id=1WmMY7RkgnNNJBMLiid2OMevP0d4a-Dgq";
+
+    // Prevent scroll except inside the scrollable order zone
+    document.body.addEventListener('touchmove', function(e){
+      const scrollable = document.getElementById('orderStatusScrollable');
+      if (!scrollable.contains(e.target)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Keypad logic
+    keypadButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (key === 'enter') {
+          trySubmitOrder();
+        } else if (!isNaN(key)) {
+          if (input.value.length < 4) { // Limit 4 digits
+            input.value += key;
+            updateEnterBtnState();
+          }
+        }
+      });
+    });
+
+    btnBackspace.addEventListener('click', () => {
+      input.value = input.value.slice(0, -1);
+      updateEnterBtnState();
+    });
+
+    // Enter button state logic
+    function updateEnterBtnState() {
+      btnEnter.disabled = !(input.value.length === 3 || input.value.length === 4);
+    }
+    updateEnterBtnState();
+
+    // Voice recognition (Web Speech API)
+    let recognizing = false;
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = 'th-TH';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      let finalTranscript = "";
+      recognition.onstart = function() { recognizing = true; btnVoice.style.opacity = 0.7; }
+      recognition.onend = function()  { recognizing = false; btnVoice.style.opacity = 1; }
+      recognition.onerror = function() { recognizing = false; btnVoice.style.opacity = 1;}
+
+      recognition.onresult = function(event) {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+        let digits = (finalTranscript + interim).replace(/\D/g, '').slice(0, 4);
+        input.value = digits;
+        updateEnterBtnState();
+        if ((digits.length === 3 || digits.length === 4) && recognizing) {
+          recognition.stop();
+          setTimeout(() => {
+            trySubmitOrder();
+          }, 100);
+        }
+      };
+
+      btnVoice.addEventListener('click', () => {
+        if (recognizing) {
+          recognition.stop();
+          return;
+        }
+        finalTranscript = "";
+        recognition.start();
+      });
+    } else {
+      btnVoice.addEventListener('click', () => {
+        alert('ขออภัย มือถือ/เบราว์เซอร์ของคุณไม่รองรับการรับเสียงพูด');
+      });
+    }
+
+    // Try submit order
+    function trySubmitOrder() {
+      let val = input.value.trim();
+      if (!/^\d{3,4}$/.test(val)) return;
+      addOrderToCooking(val);
+      input.value = '';
+      updateEnterBtnState();
+    }
+
+    function addOrderToCooking(orderNo) {
+      if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
+      cookingOrders.push(orderNo);
+      renderOrders();
+      syncOrdersToFirestore();
+    }
+
+    function moveToReady(orderNo) {
+      const idx = cookingOrders.indexOf(orderNo);
+      if (idx > -1) {
+        cookingOrders.splice(idx, 1);
+        readyOrders.push(orderNo);
+        renderOrders();
+        syncOrdersToFirestore();
+      }
+    }
+
+    function removeFromReady(orderNo) {
+      const idx = readyOrders.indexOf(orderNo);
+      if (idx > -1) {
+        readyOrders.splice(idx, 1);
+        renderOrders();
+        syncOrdersToFirestore();
+      }
+    }
+
+    function renderOrders() {
+      cookingList.innerHTML = '';
+      cookingOrders.forEach(order => {
+        const el = document.createElement('div');
+        el.className = 'order-item';
+        if (order.length === 3) {
+          el.innerHTML = `<span class="order-icon"><img class="grab-logo" src="${grabLogoUrl}" alt="Grab"></span>${order}`;
+        } else if (order.length === 4) {
+          el.innerHTML = `<span class="order-icon"><img class="lineman-logo" src="${linemanLogoUrl}" alt="Lineman"></span>${order}`;
+        } else {
+          el.innerHTML = order;
+        }
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.title = 'ย้ายไปพร้อมส่ง';
+        btn.innerText = '→';
+        btn.onclick = () => moveToReady(order);
+        el.appendChild(btn);
+        cookingList.appendChild(el);
+      });
+      readyList.innerHTML = '';
+      readyOrders.forEach(order => {
+        const el = document.createElement('div');
+        el.className = 'order-item';
+        if (order.length === 3) {
+          el.innerHTML = `<span class="order-icon"><img class="grab-logo" src="${grabLogoUrl}" alt="Grab"></span>${order}`;
+        } else if (order.length === 4) {
+          el.innerHTML = `<span class="order-icon"><img class="lineman-logo" src="${linemanLogoUrl}" alt="Lineman"></span>${order}`;
+        } else {
+          el.innerHTML = order;
+        }
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.title = 'ส่งแล้ว/ลบออก';
+        btn.innerText = '✓';
+        btn.onclick = () => removeFromReady(order);
+        el.appendChild(btn);
+        readyList.appendChild(el);
+      });
+    }
+
+    // ==== Firestore Sync ====
+    function syncOrdersToFirestore() {
+      // Collection name เปลี่ยนได้ตามต้องการ
+      const collectionRef = db.collection('orders_1');
+      // 1. ลบข้อมูลเก่าทั้งหมด
+      collectionRef.get().then(snapshot => {
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        batch.commit().then(() => {
+          // 2. เพิ่มข้อมูลใหม่
+          cookingOrders.forEach(order => {
+            collectionRef.add({
+              orderNumber: order,
+              status: "preparing",
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+          readyOrders.forEach(order => {
+            collectionRef.add({
+              orderNumber: order,
+              status: "ready",
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          });
+        });
+      });
+    }
+
+    // Init
+    renderOrders();
+    // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
+    // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
+  </script>
 </body>
 </html>

@@ -314,7 +314,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ==== Order Logic ====
     let cookingOrders = [];
     let readyOrders = [];
 
@@ -337,8 +336,8 @@
         const key = btn.dataset.key;
         if (key === 'enter') {
           trySubmitOrder();
-        } else if (key === undefined) {
-          // voice button (do nothing here, handled below)
+        } else if (btn.classList.contains('voice')) {
+          // handled below
         } else if (!isNaN(key)) {
           if (input.value.length < 4) { // Limit 4 digits
             input.value += key;
@@ -353,7 +352,6 @@
       updateEnterBtnState();
     });
 
-    // Enter button state logic
     function updateEnterBtnState() {
       btnEnter.disabled = !(input.value.length === 3 || input.value.length === 4);
     }
@@ -408,23 +406,18 @@
       });
     }
 
-    // --- LocalStorage helpers ---
-    const STORAGE_KEY = "ros_siam_orders_v2";
-    function saveOrdersToLocal() {
-      const obj = {
-        cooking: cookingOrders,
-        ready: readyOrders
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-    }
-    function loadOrdersFromLocal() {
-      try {
-        const obj = JSON.parse(localStorage.getItem(STORAGE_KEY));
-        if (obj && Array.isArray(obj.cooking) && Array.isArray(obj.ready)) {
-          cookingOrders = obj.cooking;
-          readyOrders = obj.ready;
-        }
-      } catch(e) {}
+    // ---- Firestore LIVE Sync ----
+    function loadOrdersFromFirestore() {
+      db.collection('orders_1').orderBy('timestamp').onSnapshot(snapshot => {
+        cookingOrders = [];
+        readyOrders = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.status === "preparing") cookingOrders.push(data.orderNumber);
+          else if (data.status === "ready") readyOrders.push(data.orderNumber);
+        });
+        renderOrders();
+      });
     }
 
     // Try submit order
@@ -437,32 +430,37 @@
     }
 
     function addOrderToCooking(orderNo) {
+      // เช็คซ้ำใน memory (แต่ Firestore จะ check อีกที)
       if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
-      cookingOrders.push(orderNo);
-      renderOrders();
-      syncOrdersToFirestore();
-      saveOrdersToLocal();
+      db.collection('orders_1').add({
+        orderNumber: orderNo,
+        status: "preparing",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
     }
 
     function moveToReady(orderNo) {
-      const idx = cookingOrders.indexOf(orderNo);
-      if (idx > -1) {
-        cookingOrders.splice(idx, 1);
-        readyOrders.push(orderNo);
-        renderOrders();
-        syncOrdersToFirestore();
-        saveOrdersToLocal();
-      }
+      db.collection('orders_1')
+        .where('orderNumber', '==', orderNo)
+        .where('status', '==', 'preparing')
+        .get()
+        .then(snapshot => {
+          snapshot.forEach(doc => {
+            doc.ref.update({ status: "ready", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+          });
+        });
     }
 
     function removeFromReady(orderNo) {
-      const idx = readyOrders.indexOf(orderNo);
-      if (idx > -1) {
-        readyOrders.splice(idx, 1);
-        renderOrders();
-        syncOrdersToFirestore();
-        saveOrdersToLocal();
-      }
+      db.collection('orders_1')
+        .where('orderNumber', '==', orderNo)
+        .where('status', '==', 'ready')
+        .get()
+        .then(snapshot => {
+          snapshot.forEach(doc => {
+            doc.ref.delete();
+          });
+        });
     }
 
     function renderOrders() {
@@ -506,40 +504,9 @@
       });
     }
 
-    // ==== Firestore Sync ====
-    function syncOrdersToFirestore() {
-      // Collection name เปลี่ยนได้ตามต้องการ
-      const collectionRef = db.collection('orders_1');
-      // 1. ลบข้อมูลเก่าทั้งหมด
-      collectionRef.get().then(snapshot => {
-        const batch = db.batch();
-        snapshot.forEach(doc => batch.delete(doc.ref));
-        batch.commit().then(() => {
-          // 2. เพิ่มข้อมูลใหม่
-          cookingOrders.forEach(order => {
-            collectionRef.add({
-              orderNumber: order,
-              status: "preparing",
-              timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-          });
-          readyOrders.forEach(order => {
-            collectionRef.add({
-              orderNumber: order,
-              status: "ready",
-              timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-          });
-        });
-      });
-    }
+    // --- On load: subscribe Firestore ---
+    loadOrdersFromFirestore();
 
-    // --- On load: restore orders from local storage ---
-    loadOrdersFromLocal();
-    renderOrders();
-
-    // // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
-    // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
   </script>
 </body>
 </html>

@@ -15,7 +15,6 @@
     body {
       width: 100vw;
       height: 100vh;
-      /* overflow: hidden;  <<== เอาออก */
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
@@ -36,9 +35,6 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 9;
-      /* เพิ่มสองบรรทัดนี้ */
-      max-height: calc(100vh - 260px); /* เว้นที่สำหรับ keypad */
-      overflow-y: auto;
     }
     .order-status-block {
       background: #f6f6f6;
@@ -120,7 +116,7 @@
       left: 50%;
       transform: translateX(-50%);
       box-shadow: 0 -2px 18px rgba(0,0,0,0.04);
-      padding: 22px 10px 18px 10px;
+      padding: 22px 10px 12px 10px;
       box-sizing: border-box;
       z-index: 10;
     }
@@ -165,10 +161,6 @@
       background: #333;
       margin-left: 8px;
     }
-    .icon-btn.voice {
-      background: #800014;
-      margin-left: 8px;
-    }
     .icon-btn svg {
       width: 30px;
       height: 30px;
@@ -177,9 +169,7 @@
     .icon-btn.backspace svg {
       fill: #fff;
     }
-    .icon-btn.voice svg {
-      fill: #fff;
-    }
+
     .keypad {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -220,6 +210,33 @@
       opacity: 0.7;
       cursor: not-allowed;
     }
+    .keypad-btn.voice {
+      background: #800014;
+      color: #fff;
+      width: 100%;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4em;
+      border-radius: 13px;
+      margin-left: 0;
+      margin-right: 0;
+      transition: background 0.13s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .keypad-btn.voice img {
+      width: 32px;
+      height: 32px;
+      object-fit: contain;
+      display: block;
+    }
+    .keypad-btn.voice:disabled {
+      background: #bdbdbd;
+      color: #fff;
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
     @media (max-width: 480px) {
       .order-status-zone, .order-keypad-container {
         max-width: 100vw;
@@ -237,11 +254,10 @@
         width: 38px; height: 38px;
       }
       .icon-btn svg { width: 22px; height: 22px;}
-      .keypad-btn { height: 46px; font-size: 1.3rem;}
+      .keypad-btn, .keypad-btn.voice { height: 46px; font-size: 1.3rem;}
       .order-item {font-size: 1.02em; padding: 3px 8px;}
       .order-status-zone {padding-top: 7px;}
       .order-icon, .grab-logo, .lineman-logo { width: 1em; height: 1em;}
-      .order-status-zone { max-height: calc(100vh - 200px);}
     }
   </style>
 </head>
@@ -260,12 +276,7 @@
     <div class="order-input-row">
       <input type="text" class="order-input" id="orderInput" inputmode="none" readonly placeholder="กรอกออเดอร์ที่นี่"/>
       <button class="icon-btn backspace" id="btnBackspace" tabindex="-1" aria-label="Backspace">
-        <!-- White back arrow SVG -->
         <svg viewBox="0 0 32 32"><path d="M12.8 8L4 16l8.8 8H28v-2.67H16V10.67h12V8z"></path></svg>
-      </button>
-      <button class="icon-btn voice" id="btnVoice" tabindex="-1" aria-label="Voice Input">
-        <!-- White mic SVG -->
-        <svg viewBox="0 0 32 32"><ellipse cx="16" cy="13" rx="5" ry="7"/><rect x="13" y="20" width="6" height="6" rx="2"/><rect x="14.5" y="24" width="3" height="4" rx="1.5"/></svg>
       </button>
     </div>
     <div class="keypad">
@@ -278,11 +289,14 @@
       <button class="keypad-btn" data-key="7">7</button>
       <button class="keypad-btn" data-key="8">8</button>
       <button class="keypad-btn" data-key="9">9</button>
-      <button class="keypad-btn" data-key="0" style="grid-column: 2;">0</button>
-      <button class="keypad-btn enter" id="btnEnter" data-key="enter" style="grid-column: 3;">Enter</button>
+      <button class="keypad-btn" data-key="0">0</button>
+      <button class="keypad-btn enter" id="btnEnter" data-key="enter">Enter</button>
+      <button class="keypad-btn voice" id="btnVoice" tabindex="-1" aria-label="Voice Input">
+        <img src="https://i.postimg.cc/yxzKd3tM/2.png" alt="Voice">
+      </button>
     </div>
   </div>
-  
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -317,17 +331,14 @@
     const grabLogoUrl = "https://drive.google.com/thumbnail?id=1vhOumfzWD7xseUY1YMqfHab7fdbln_Mg";
     const linemanLogoUrl = "https://drive.google.com/thumbnail?id=1WmMY7RkgnNNJBMLiid2OMevP0d4a-Dgq";
 
-    // (ลบ Prevent scroll นี้ออก)
-    // document.body.addEventListener('touchmove', function(e){
-    //   e.preventDefault();
-    // }, { passive: false });
-
     // Keypad logic
     keypadButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.key;
         if (key === 'enter') {
           trySubmitOrder();
+        } else if (key === undefined) {
+          // voice button (do nothing here, handled below)
         } else if (!isNaN(key)) {
           if (input.value.length < 4) { // Limit 4 digits
             input.value += key;

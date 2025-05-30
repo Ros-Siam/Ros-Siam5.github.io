@@ -297,8 +297,8 @@
     const db = firebase.firestore();
 
     // ==== Order Logic ====
-    const cookingOrders = [];
-    const readyOrders = [];
+    let cookingOrders = [];
+    let readyOrders = [];
 
     // DOM
     const input = document.getElementById('orderInput');
@@ -393,6 +393,25 @@
       });
     }
 
+    // --- LocalStorage helpers ---
+    const STORAGE_KEY = "ros_siam_orders_v2";
+    function saveOrdersToLocal() {
+      const obj = {
+        cooking: cookingOrders,
+        ready: readyOrders
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+    }
+    function loadOrdersFromLocal() {
+      try {
+        const obj = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (obj && Array.isArray(obj.cooking) && Array.isArray(obj.ready)) {
+          cookingOrders = obj.cooking;
+          readyOrders = obj.ready;
+        }
+      } catch(e) {}
+    }
+
     // Try submit order
     function trySubmitOrder() {
       let val = input.value.trim();
@@ -407,6 +426,7 @@
       cookingOrders.push(orderNo);
       renderOrders();
       syncOrdersToFirestore();
+      saveOrdersToLocal();
     }
 
     function moveToReady(orderNo) {
@@ -416,6 +436,7 @@
         readyOrders.push(orderNo);
         renderOrders();
         syncOrdersToFirestore();
+        saveOrdersToLocal();
       }
     }
 
@@ -425,6 +446,7 @@
         readyOrders.splice(idx, 1);
         renderOrders();
         syncOrdersToFirestore();
+        saveOrdersToLocal();
       }
     }
 
@@ -497,9 +519,11 @@
       });
     }
 
-    // Init
+    // --- On load: restore orders from local storage ---
+    loadOrdersFromLocal();
     renderOrders();
-    // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
+
+    // // ถ้าต้องการโหลด order จาก firebase ตอนเปิดหน้า (ไม่บังคับ)
     // loadOrdersFromFirestore(); // **แนะนำใช้เฉพาะถ้าให้หลายเครื่อง sync กัน**
   </script>
 </body>

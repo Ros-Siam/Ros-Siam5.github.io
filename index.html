@@ -1,5 +1,3 @@
-Input Website ตัวล่าสุด
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -261,9 +259,66 @@ Input Website ตัวล่าสุด
       .order-status-zone {padding-top: 7px;}
       .order-icon, .grab-logo, .lineman-logo { width: 1em; height: 1em;}
     }
+
+    /* Password Modal overrides */
+    #passwordModal {
+      display:flex;
+      position:fixed;
+      z-index:9999;
+      top:0;
+      left:0;
+      width:100vw;
+      height:100vh;
+      justify-content:center;
+      align-items:center;
+      background:rgba(255,255,255,0.97);
+    }
+    #passwordModal .pwbox {
+      background:#fff;
+      border-radius:14px;
+      padding:36px 26px;
+      box-shadow:0 4px 28px rgba(0,0,0,0.10);
+      max-width:95%;
+      min-width:240px;
+      text-align:center;
+    }
+    #passwordModal input[type="password"] {
+      font-size:1.15em;
+      padding:9px 14px;
+      border-radius:8px;
+      border:1.5px solid #ccc;
+      width:100%;
+      margin-bottom:16px;
+      box-sizing:border-box;
+    }
+    #passwordModal .pwbtn {
+      background:#800014;
+      color:#fff;
+      font-size:1.1em;
+      padding:7px 28px;
+      border:none;
+      border-radius:7px;
+      cursor:pointer;
+    }
+    #passwordModal .pwerror {
+      color:#b0001a;
+      margin-top:13px;
+      font-size:1em;
+      display:none;
+    }
   </style>
 </head>
 <body>
+  <!-- Password Popup -->
+  <div id="passwordModal">
+    <div class="pwbox">
+      <div style="font-size:1.2em;font-weight:bold;margin-bottom:14px;color:#800014;">กรุณาใส่รหัสผ่าน</div>
+      <input id="pwInput" type="password" placeholder="Password" autocomplete="off"/>
+      <br>
+      <button id="pwBtn" class="pwbtn">เข้าสู่ระบบ</button>
+      <div id="pwError" class="pwerror">รหัสผ่านไม่ถูกต้อง</div>
+    </div>
+  </div>
   <div class="order-status-zone">
     <div class="order-status-block" id="cookingBlock">
       <div class="order-status-title">กำลังเตรียมอาหาร</div>
@@ -303,6 +358,36 @@ Input Website ตัวล่าสุด
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script>
+    // ==== Password Protection ====
+    const CORRECT_PASSWORD = "112255";
+    const passwordModal = document.getElementById('passwordModal');
+    const pwInput = document.getElementById('pwInput');
+    const pwBtn = document.getElementById('pwBtn');
+    const pwError = document.getElementById('pwError');
+    document.body.style.overflow = 'hidden';
+
+    function unlockPage() {
+      passwordModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    function showError() {
+      pwError.style.display = 'block';
+      pwInput.value = '';
+      pwInput.focus();
+    }
+
+    pwBtn.onclick = function() {
+      if (pwInput.value === CORRECT_PASSWORD) {
+        unlockPage();
+      } else {
+        showError();
+      }
+    };
+    pwInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') pwBtn.click();
+    });
+    setTimeout(() => { pwInput.focus(); }, 200);
+
     // ==== Firebase config ====
     const firebaseConfig = {
       apiKey: "AIzaSyCFisUUeCGCvL3_3XK3t_OStyO3f24A238",
@@ -508,7 +593,6 @@ Input Website ตัวล่าสุด
 
     // --- On load: subscribe Firestore ---
     loadOrdersFromFirestore();
-
   </script>
 </body>
 </html>

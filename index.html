@@ -1,3 +1,5 @@
+Input Website ตัวล่าสุด
+
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -5,35 +7,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Queue Order Input</title>
   <style>
-    body {
+    html, body {
+      height: 100%;
       margin: 0;
       padding: 0;
-      height: 100vh;
       background: #fff;
       font-family: 'Prompt', Arial, sans-serif;
-      overflow: hidden;
+    }
+    body {
+      width: 100vw;
+      height: 100vh;
       display: flex;
       flex-direction: column;
+      justify-content: flex-end;
       align-items: center;
+      touch-action: manipulation;
     }
-    .order-scroll-area {
+    .order-status-zone {
       width: 100vw;
       max-width: 420px;
       margin: 0 auto;
-      height: calc(100vh - 290px);
-      overflow-y: auto;
-      background: #fff;
-      z-index: 1;
-      padding-top: 16px;
-      padding-bottom: 16px;
-    }
-    .order-status-zone {
-      width: 100%;
       display: flex;
       flex-direction: column;
       gap: 14px;
-      padding: 0 10px 0 10px;
+      padding: 18px 10px 10px 10px;
       box-sizing: border-box;
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9;
     }
     .order-status-block {
       background: #f6f6f6;
@@ -71,6 +74,20 @@
       transition: background 0.17s;
       min-width: 60px;
     }
+    .order-icon {
+      margin-right: 6px;
+      display: flex;
+      align-items: center;
+      height: 1.3em;
+    }
+    .grab-logo, .lineman-logo {
+      width: 1.3em;
+      height: 1.3em;
+      display: inline-block;
+      object-fit: contain;
+      border-radius: 3px;
+      background: #fff;
+    }
     .order-item .move-btn {
       margin-left: 7px;
       background: #800014;
@@ -90,30 +107,26 @@
     .order-item .move-btn:active {
       background: #b0001a;
     }
-    /* Floating keypad */
-    .floating-keyboard {
-      position: fixed;
-      left: 50%;
-      bottom: 0;
-      transform: translateX(-50%);
+
+    .order-keypad-container {
       width: 100vw;
       max-width: 420px;
-      z-index: 1000;
+      margin: 0 auto;
       background: #fff;
-      box-shadow: 0 -4px 28px 0 rgba(80,80,80,0.14), 0 -1.5px 9px 0 rgba(160,0,0,0.06);
-      border-radius: 18px 18px 0 0;
-      padding: 16px 13px 17px 13px;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      gap: 12px;
-      user-select: none;
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 -2px 18px rgba(0,0,0,0.04);
+      padding: 22px 10px 12px 10px;
+      box-sizing: border-box;
+      z-index: 10;
     }
     .order-input-row {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 8px;
+      margin-bottom: 18px;
       gap: 10px;
     }
     .order-input {
@@ -154,15 +167,19 @@
       width: 30px;
       height: 30px;
       display: block;
+    }
+    .icon-btn.backspace svg {
       fill: #fff;
     }
-    .keyboard-keypad {
+
+    .keypad {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       width: 100%;
+      margin-bottom: 0;
     }
-    .keyboard-btn {
+    .keypad-btn {
       width: 100%;
       height: 60px;
       background: #fff;
@@ -181,51 +198,49 @@
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .keyboard-btn:active {
+    .keypad-btn:active {
       background: #f2f2f2;
     }
-    .keyboard-btn.enter {
+    .keypad-btn.enter {
       background: #333;
       color: #fff;
+      transition: background 0.13s;
     }
-    .keyboard-btn.enter:disabled {
+    .keypad-btn.enter:disabled {
       background: #bdbdbd;
       color: #fff;
       opacity: 0.7;
       cursor: not-allowed;
     }
-    .keyboard-btn.voice {
+    .keypad-btn.voice {
       background: #800014;
       color: #fff;
-      font-size: 1.4em;
-      border-radius: 13px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+      width: 100%;
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 60px;
+      font-size: 1.4em;
+      border-radius: 13px;
+      margin-left: 0;
+      margin-right: 0;
+      transition: background 0.13s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
-    .keyboard-btn.voice img {
+    .keypad-btn.voice img {
       width: 32px;
       height: 32px;
       object-fit: contain;
       display: block;
     }
-    .keyboard-btn.voice:disabled {
+    .keypad-btn.voice:disabled {
       background: #bdbdbd;
       color: #fff;
       opacity: 0.7;
       cursor: not-allowed;
     }
-    .keyboard-row-last {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      width: 100%;
-      margin-top: 10px;
-    }
     @media (max-width: 480px) {
-      .order-scroll-area, .floating-keyboard {
+      .order-status-zone, .order-keypad-container {
         max-width: 100vw;
         padding-left: 3px;
         padding-right: 3px;
@@ -241,130 +256,259 @@
         width: 38px; height: 38px;
       }
       .icon-btn svg { width: 22px; height: 22px;}
-      .keyboard-btn, .keyboard-btn.voice { height: 46px; font-size: 1.3rem;}
+      .keypad-btn, .keypad-btn.voice { height: 46px; font-size: 1.3rem;}
       .order-item {font-size: 1.02em; padding: 3px 8px;}
       .order-status-zone {padding-top: 7px;}
-      .order-scroll-area { height: calc(100vh - 200px);}
+      .order-icon, .grab-logo, .lineman-logo { width: 1em; height: 1em;}
     }
   </style>
 </head>
 <body>
-  <div class="order-scroll-area">
-    <div class="order-status-zone">
-      <div class="order-status-block" id="cookingBlock">
-        <div class="order-status-title">กำลังเตรียมอาหาร</div>
-        <div class="order-list" id="cookingList"></div>
-      </div>
-      <div class="order-status-block" id="readyBlock">
-        <div class="order-status-title">พร้อมส่ง</div>
-        <div class="order-list" id="readyList"></div>
-      </div>
+  <div class="order-status-zone">
+    <div class="order-status-block" id="cookingBlock">
+      <div class="order-status-title">กำลังเตรียมอาหาร</div>
+      <div class="order-list" id="cookingList"></div>
+    </div>
+    <div class="order-status-block" id="readyBlock">
+      <div class="order-status-title">พร้อมส่ง</div>
+      <div class="order-list" id="readyList"></div>
     </div>
   </div>
-  <div class="floating-keyboard">
+  <div class="order-keypad-container">
     <div class="order-input-row">
-      <input type="text" class="order-input" id="orderInput" inputmode="numeric" maxlength="4" placeholder="กรอกออเดอร์ที่นี่"/>
-      <button class="icon-btn backspace" id="btnBackspace" aria-label="Backspace">
+      <input type="text" class="order-input" id="orderInput" inputmode="none" readonly placeholder="กรอกออเดอร์ที่นี่"/>
+      <button class="icon-btn backspace" id="btnBackspace" tabindex="-1" aria-label="Backspace">
         <svg viewBox="0 0 32 32"><path d="M12.8 8L4 16l8.8 8H28v-2.67H16V10.67h12V8z"></path></svg>
       </button>
     </div>
-    <div class="keyboard-keypad">
-      <button class="keyboard-btn" data-key="1">1</button>
-      <button class="keyboard-btn" data-key="2">2</button>
-      <button class="keyboard-btn" data-key="3">3</button>
-      <button class="keyboard-btn" data-key="4">4</button>
-      <button class="keyboard-btn" data-key="5">5</button>
-      <button class="keyboard-btn" data-key="6">6</button>
-      <button class="keyboard-btn" data-key="7">7</button>
-      <button class="keyboard-btn" data-key="8">8</button>
-      <button class="keyboard-btn" data-key="9">9</button>
-    </div>
-    <div class="keyboard-row-last">
-      <button class="keyboard-btn" data-key="0">0</button>
-      <button class="keyboard-btn enter" id="btnEnter" data-key="enter">Enter</button>
-      <button class="keyboard-btn voice" id="btnVoice" aria-label="Voice Input">
+    <div class="keypad">
+      <button class="keypad-btn" data-key="1">1</button>
+      <button class="keypad-btn" data-key="2">2</button>
+      <button class="keypad-btn" data-key="3">3</button>
+      <button class="keypad-btn" data-key="4">4</button>
+      <button class="keypad-btn" data-key="5">5</button>
+      <button class="keypad-btn" data-key="6">6</button>
+      <button class="keypad-btn" data-key="7">7</button>
+      <button class="keypad-btn" data-key="8">8</button>
+      <button class="keypad-btn" data-key="9">9</button>
+      <button class="keypad-btn" data-key="0">0</button>
+      <button class="keypad-btn enter" id="btnEnter" data-key="enter">Enter</button>
+      <button class="keypad-btn voice" id="btnVoice" tabindex="-1" aria-label="Voice Input">
         <img src="https://i.postimg.cc/yxzKd3tM/2.png" alt="Voice">
       </button>
     </div>
   </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script>
-    // ตัวอย่างระบบ order (local only demo)
+    // ==== Firebase config ====
+    const firebaseConfig = {
+      apiKey: "AIzaSyCFisUUeCGCvL3_3XK3t_OStyO3f24A238",
+      authDomain: "ros-siam-queue-management.firebaseapp.com",
+      projectId: "ros-siam-queue-management",
+      storageBucket: "ros-siam-queue-management.appspot.com",
+      messagingSenderId: "790945202211",
+      appId: "1:790945202211:web:d9df471dbd9fca8d843196",
+      measurementId: "G-V3KN3LCMY7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     let cookingOrders = [];
     let readyOrders = [];
-    const cookingList = document.getElementById('cookingList');
-    const readyList = document.getElementById('readyList');
-    function renderOrders() {
-      cookingList.innerHTML = '';
-      cookingOrders.forEach(order => {
-        const el = document.createElement('div');
-        el.className = 'order-item';
-        el.innerHTML = order + ' <button class="move-btn" title="พร้อมส่ง">→</button>';
-        el.querySelector('.move-btn').onclick = () => { moveToReady(order); };
-        cookingList.appendChild(el);
-      });
-      readyList.innerHTML = '';
-      readyOrders.forEach(order => {
-        const el = document.createElement('div');
-        el.className = 'order-item';
-        el.innerHTML = order + ' <button class="move-btn" title="ลบ">✓</button>';
-        el.querySelector('.move-btn').onclick = () => { removeFromReady(order); };
-        readyList.appendChild(el);
-      });
-    }
-    function addOrder(val) {
-      if (val && !cookingOrders.includes(val) && !readyOrders.includes(val)) {
-        cookingOrders.push(val);
-        renderOrders();
-      }
-    }
-    function moveToReady(val) {
-      const idx = cookingOrders.indexOf(val);
-      if (idx > -1) {
-        cookingOrders.splice(idx, 1);
-        readyOrders.push(val);
-        renderOrders();
-      }
-    }
-    function removeFromReady(val) {
-      const idx = readyOrders.indexOf(val);
-      if (idx > -1) {
-        readyOrders.splice(idx, 1);
-        renderOrders();
-      }
-    }
-    // keypad logic
+
+    // DOM
     const input = document.getElementById('orderInput');
     const btnBackspace = document.getElementById('btnBackspace');
     const btnVoice = document.getElementById('btnVoice');
-    const keypadButtons = document.querySelectorAll('.keyboard-btn');
+    const keypadButtons = document.querySelectorAll('.keypad-btn');
     const btnEnter = document.getElementById('btnEnter');
-    function updateEnterBtnState() {
-      btnEnter.disabled = !(input.value.length === 3 || input.value.length === 4);
-    }
+    const cookingList = document.getElementById('cookingList');
+    const readyList = document.getElementById('readyList');
+
+    // Logo URLs
+    const grabLogoUrl = "https://drive.google.com/thumbnail?id=1vhOumfzWD7xseUY1YMqfHab7fdbln_Mg";
+    const linemanLogoUrl = "https://drive.google.com/thumbnail?id=1WmMY7RkgnNNJBMLiid2OMevP0d4a-Dgq";
+
+    // Keypad logic
     keypadButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.key;
         if (key === 'enter') {
-          addOrder(input.value.trim());
-          input.value = "";
-          updateEnterBtnState();
+          trySubmitOrder();
         } else if (btn.classList.contains('voice')) {
-          // ใส่ฟีเจอร์เสียงหากต้องการ
+          // handled below
         } else if (!isNaN(key)) {
-          if (input.value.length < 4) {
+          if (input.value.length < 4) { // Limit 4 digits
             input.value += key;
             updateEnterBtnState();
           }
         }
       });
     });
+
     btnBackspace.addEventListener('click', () => {
       input.value = input.value.slice(0, -1);
       updateEnterBtnState();
     });
-    input.addEventListener('input', updateEnterBtnState);
+
+    function updateEnterBtnState() {
+      btnEnter.disabled = !(input.value.length === 3 || input.value.length === 4);
+    }
     updateEnterBtnState();
-    renderOrders();
+
+    // Voice recognition (Web Speech API)
+    let recognizing = false;
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = 'th-TH';
+      recognition.continuous = false;
+      recognition.interimResults = true;
+
+      let finalTranscript = "";
+      recognition.onstart = function() { recognizing = true; btnVoice.style.opacity = 0.7; }
+      recognition.onend = function()  { recognizing = false; btnVoice.style.opacity = 1; }
+      recognition.onerror = function() { recognizing = false; btnVoice.style.opacity = 1;}
+
+      recognition.onresult = function(event) {
+        let interim = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interim += transcript;
+          }
+        }
+        let digits = (finalTranscript + interim).replace(/\D/g, '').slice(0, 4);
+        input.value = digits;
+        updateEnterBtnState();
+        if ((digits.length === 3 || digits.length === 4) && recognizing) {
+          recognition.stop();
+          setTimeout(() => {
+            trySubmitOrder();
+          }, 100);
+        }
+      };
+
+      btnVoice.addEventListener('click', () => {
+        if (recognizing) {
+          recognition.stop();
+          return;
+        }
+        finalTranscript = "";
+        recognition.start();
+      });
+    } else {
+      btnVoice.addEventListener('click', () => {
+        alert('ขออภัย มือถือ/เบราว์เซอร์ของคุณไม่รองรับการรับเสียงพูด');
+      });
+    }
+
+    // ---- Firestore LIVE Sync ----
+    function loadOrdersFromFirestore() {
+      db.collection('orders_1').orderBy('timestamp').onSnapshot(snapshot => {
+        cookingOrders = [];
+        readyOrders = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.status === "preparing") cookingOrders.push(data.orderNumber);
+          else if (data.status === "ready") readyOrders.push(data.orderNumber);
+        });
+        renderOrders();
+      });
+    }
+
+    // Try submit order
+    function trySubmitOrder() {
+      let val = input.value.trim();
+      if (!/^\d{3,4}$/.test(val)) return;
+      addOrderToCooking(val);
+      input.value = '';
+      updateEnterBtnState();
+    }
+
+    function addOrderToCooking(orderNo) {
+      // เช็คซ้ำใน memory (แต่ Firestore จะ check อีกที)
+      if (cookingOrders.includes(orderNo) || readyOrders.includes(orderNo)) return;
+      db.collection('orders_1').add({
+        orderNumber: orderNo,
+        status: "preparing",
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    function moveToReady(orderNo) {
+      db.collection('orders_1')
+        .where('orderNumber', '==', orderNo)
+        .where('status', '==', 'preparing')
+        .get()
+        .then(snapshot => {
+          snapshot.forEach(doc => {
+            doc.ref.update({ status: "ready", timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+          });
+        });
+    }
+
+    function removeFromReady(orderNo) {
+      db.collection('orders_1')
+        .where('orderNumber', '==', orderNo)
+        .where('status', '==', 'ready')
+        .get()
+        .then(snapshot => {
+          snapshot.forEach(doc => {
+            doc.ref.delete();
+          });
+        });
+    }
+
+    function renderOrders() {
+      cookingList.innerHTML = '';
+      cookingOrders.forEach(order => {
+        const el = document.createElement('div');
+        el.className = 'order-item';
+        if (order.length === 3) {
+          el.innerHTML = `<span class="order-icon"><img class="grab-logo" src="${grabLogoUrl}" alt="Grab"></span>${order}`;
+        } else if (order.length === 4) {
+          el.innerHTML = `<span class="order-icon"><img class="lineman-logo" src="${linemanLogoUrl}" alt="Lineman"></span>${order}`;
+        } else {
+          el.innerHTML = order;
+        }
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.title = 'ย้ายไปพร้อมส่ง';
+        btn.innerText = '→';
+        btn.onclick = () => moveToReady(order);
+        el.appendChild(btn);
+        cookingList.appendChild(el);
+      });
+      readyList.innerHTML = '';
+      readyOrders.forEach(order => {
+        const el = document.createElement('div');
+        el.className = 'order-item';
+        if (order.length === 3) {
+          el.innerHTML = `<span class="order-icon"><img class="grab-logo" src="${grabLogoUrl}" alt="Grab"></span>${order}`;
+        } else if (order.length === 4) {
+          el.innerHTML = `<span class="order-icon"><img class="lineman-logo" src="${linemanLogoUrl}" alt="Lineman"></span>${order}`;
+        } else {
+          el.innerHTML = order;
+        }
+        const btn = document.createElement('button');
+        btn.className = 'move-btn';
+        btn.title = 'ส่งแล้ว/ลบออก';
+        btn.innerText = '✓';
+        btn.onclick = () => removeFromReady(order);
+        el.appendChild(btn);
+        readyList.appendChild(el);
+      });
+    }
+
+    // --- On load: subscribe Firestore ---
+    loadOrdersFromFirestore();
+
   </script>
 </body>
 </html>
